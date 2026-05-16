@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { supabase } from './supabase';
+import { supabase, USE_MOCK } from './supabase';
+import { mockSignIn, mockSignUp, mockSignOut, mockGetSession } from './mockData';
 
 const AuthContext = createContext(null);
 
@@ -36,6 +37,15 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true;
 
+    if (USE_MOCK) {
+      mockGetSession().then((profile) => {
+        if (!mounted) return;
+        setUser(profile);
+        setLoading(false);
+      });
+      return () => { mounted = false; };
+    }
+
     supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return;
       await refreshUser(data.session);
@@ -54,6 +64,11 @@ export function AuthProvider({ children }) {
   }, [refreshUser]);
 
   const login = async (email, password) => {
+    if (USE_MOCK) {
+      const profile = await mockSignIn(email, password);
+      setUser(profile);
+      return profile;
+    }
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email?.toLowerCase().trim(),
       password,
@@ -63,6 +78,11 @@ export function AuthProvider({ children }) {
   };
 
   const signup = async (name, email, password) => {
+    if (USE_MOCK) {
+      const profile = await mockSignUp(name, email, password);
+      setUser(profile);
+      return profile;
+    }
     const trimmedName = name?.trim();
     const normalizedEmail = email?.toLowerCase().trim();
     const { data, error } = await supabase.auth.signUp({
@@ -78,6 +98,11 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
+    if (USE_MOCK) {
+      await mockSignOut();
+      setUser(null);
+      return;
+    }
     await supabase.auth.signOut();
     setUser(null);
   };

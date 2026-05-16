@@ -1,4 +1,5 @@
-import { supabase } from './supabase';
+import { supabase, USE_MOCK } from './supabase';
+import * as mock from './mockData';
 
 function unwrap({ data, error }) {
   if (error) throw error;
@@ -28,6 +29,7 @@ function flattenTask(row) {
 // ============ AUTH-RELATED ============
 
 export async function getCurrentProfile() {
+  if (USE_MOCK) return mock.mockGetSession();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   return unwrap(await supabase.from('profiles').select('id, name, email, role').eq('id', user.id).single());
@@ -36,6 +38,7 @@ export async function getCurrentProfile() {
 // ============ PROJECTS ============
 
 export async function listProjects(currentUser) {
+  if (USE_MOCK) return mock.mockListProjects(currentUser);
   const isGlobalAdmin = currentUser?.role === 'admin';
 
   // 1. Fetch projects + admin name (RLS ensures we only see what we can)
@@ -91,6 +94,7 @@ export async function listProjects(currentUser) {
 }
 
 export async function createProject({ name, description }, currentUser) {
+  if (USE_MOCK) return mock.mockCreateProject({ name, description }, currentUser);
   const trimmedName = String(name || '').trim();
   if (!trimmedName) throw new Error('Project name is required');
   if (trimmedName.length > 120) throw new Error('Project name is too long');
@@ -123,6 +127,7 @@ export async function createProject({ name, description }, currentUser) {
 }
 
 export async function updateProject(projectId, { name, description }) {
+  if (USE_MOCK) return mock.mockUpdateProject(projectId, { name, description });
   const trimmedName = String(name || '').trim();
   if (!trimmedName) throw new Error('Project name is required');
   const updated = unwrap(
@@ -137,10 +142,12 @@ export async function updateProject(projectId, { name, description }) {
 }
 
 export async function deleteProject(projectId) {
+  if (USE_MOCK) return mock.mockDeleteProject(projectId);
   unwrap(await supabase.from('projects').delete().eq('id', projectId));
 }
 
 export async function getProjectDetail(projectId) {
+  if (USE_MOCK) return mock.mockGetProjectDetail(projectId);
   const project = unwrap(
     await supabase
       .from('projects')
@@ -172,6 +179,7 @@ export async function getProjectDetail(projectId) {
 }
 
 export async function addProjectMember(projectId, email) {
+  if (USE_MOCK) return mock.mockAddProjectMember(projectId, email);
   const cleanEmail = email?.toLowerCase().trim();
   if (!cleanEmail) throw new Error('Email required');
 
@@ -204,6 +212,7 @@ export async function addProjectMember(projectId, email) {
 }
 
 export async function removeProjectMember(projectId, userId) {
+  if (USE_MOCK) return mock.mockRemoveProjectMember(projectId, userId);
   const project = unwrap(
     await supabase.from('projects').select('admin_id').eq('id', projectId).single()
   );
@@ -227,6 +236,7 @@ const TASK_SELECT = `
 `;
 
 export async function listProjectTasks(projectId) {
+  if (USE_MOCK) return mock.mockListProjectTasks(projectId);
   const rows = unwrap(
     await supabase
       .from('tasks')
@@ -237,6 +247,7 @@ export async function listProjectTasks(projectId) {
 }
 
 export async function createTask(projectId, payload, currentUser) {
+  if (USE_MOCK) return mock.mockCreateTask(projectId, payload, currentUser);
   const title = String(payload.title || '').trim();
   if (!title) throw new Error('Title is required');
 
@@ -258,6 +269,7 @@ export async function createTask(projectId, payload, currentUser) {
 }
 
 export async function updateTaskFull(taskId, patch) {
+  if (USE_MOCK) return mock.mockUpdateTaskFull(taskId, patch);
   const update = { ...patch };
   if ('due_date' in update && !update.due_date) update.due_date = null;
   if ('assignee_id' in update && !update.assignee_id) update.assignee_id = null;
@@ -268,6 +280,7 @@ export async function updateTaskFull(taskId, patch) {
 }
 
 export async function updateTaskStatus(taskId, status) {
+  if (USE_MOCK) return mock.mockUpdateTaskStatus(taskId, status);
   const validStatuses = ['todo', 'in_progress', 'done'];
   if (!validStatuses.includes(status)) throw new Error('Invalid status');
   unwrap(
@@ -280,12 +293,14 @@ export async function updateTaskStatus(taskId, status) {
 }
 
 export async function deleteTask(taskId) {
+  if (USE_MOCK) return mock.mockDeleteTask(taskId);
   unwrap(await supabase.from('tasks').delete().eq('id', taskId));
 }
 
 // ============ DASHBOARD ============
 
 export async function getDashboard(currentUser) {
+  if (USE_MOCK) return mock.mockGetDashboard(currentUser);
   const isGlobalAdmin = currentUser?.role === 'admin';
 
   const projects = await listProjects(currentUser);
